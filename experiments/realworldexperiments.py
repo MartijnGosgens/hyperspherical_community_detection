@@ -129,3 +129,10 @@ def generate_figures():
         G, T = load_dataset(name)
         perform_experiment(name, G, T, load=False)
         plot_experiment(name, gt_lat=pv.clustering_binary(T).latitude())
+
+def generate_figures_for_large_graphs():
+    from .benchmarknetworks import load_dataset
+    for name in ['cora', 'as']:
+        G, T = load_dataset(name)
+        perform_experiment(name, G, T, load=False)
+        plot_experiment(name, gt_lat=pv.clustering_binary(T).latitude())
