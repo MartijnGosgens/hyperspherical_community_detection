@@ -58,13 +58,13 @@ def perform_ppm_experiment(n=400,k=20,mean_degree=10,mix=0.4,seed=0,nlats=33):
 
 
 def ppm_experiment_plot_cluster_lats(df):
-    ax=df.plot(y=[r'$\ell(b(C))$',r'$\ell(b(T))$'],style=['-','--'])
+    ax=df.plot(y=[r'$\ell(b(C))$',r'$\ell(b(T))$',r'$\ell(q)$'],style=['-','--','--'])
     intersect=df.index[(df[r'$\ell(b(C))$'] - bT_lat).abs().argmin()]
     ax.set_xlabel(r'Query latitude $\ell(q)$')
     ax.set_ylabel(r'Candidate latitude')
     plt.setp(ax,
-             xticks=[0,np.pi / 4, intersect, 3*np.pi / 4,np.pi],
-             xticklabels=[r'$0$',r'$\frac{1}{4}\pi$', format_angle(intersect, digits=2), r'$\frac{3}{4}\pi$', r'$\pi$'],
+             xticks=[0,np.pi / 3, np.pi/2,np.pi],
+             xticklabels=[r'$0$',r'$\frac{1}{3}\pi$', r'$\frac{1}{2}\pi$', r'$\pi$'],
              yticks=[bT_lat, np.pi / 2,np.pi],
              yticklabels=[format_angle(bT_lat,2), r'$\frac{1}{2}\pi$',r'$\pi$'])
     ax.set_ylim(0,np.pi)
@@ -111,7 +111,7 @@ def ppm_experiment_plot_validation(df,triangle_bounds=False):
     ax.set_xlabel(r'Query latitude $\ell(q)$')
     ax.set_ylabel(r'Correlation distance')
     dCC_min = df.index[df[r'$d_{CC}(b(T),b(C))$'].argmin()]
-    da_min = df.index[df[r'$d_a(q,b(T))$'].argmin()]
+    da_min = np.arctan(np.cos(dCC_eG_bT)*np.tan(bT_lat))
     plt.setp(ax,
              xticks=[0,da_min,bT_lat, dCC_min, 3*np.pi / 4,np.pi],
              xticklabels=[r'$0$',r"$\lambda'$",r'$\ell(b(T))$', format_angle(dCC_min,digits=2), r'$\frac{3}{4}\pi$', r'$\pi$'],

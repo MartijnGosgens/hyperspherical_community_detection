@@ -59,19 +59,22 @@ def perform_experiment(name,G,T,
     if load:
         with open(name + '_scores.json') as f:
             scores = json.load(f)
-    if compute_CM_mod:
+    if compute_CM_mod and 'CM modularity' not in scores:
         scores['CM modularity'] = []
     for x_name in compute_meridians:
-        scores[x_name] = []
+        if x_name not in scores:
+            scores[x_name] = []
     bT = pv.clustering_binary(T)
-    for lat in desired_lats:
+    for ilat,lat in enumerate(desired_lats):
         for x_name in compute_meridians:
+            if len(scores[x_name]) > ilat:
+                continue
             x_map = meridian2map[x_name]
             x = x_map(G)
             q = x.latitude_on_meridian(lat)
             bC = pv.clustering_binary(pv.louvain_projection(q))
             scores[x_name].append(bT.meridian_angle(bC))
-        if compute_CM_mod:
+        if compute_CM_mod and len(scores['CM modularity']) <= ilat:
             res = lat2CM_res(G, lat)
             mod_score = np.pi / 2
             if res not in [float('inf'), -float('inf')]:
