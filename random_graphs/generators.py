@@ -1,7 +1,29 @@
-from community_detection_toolbox.Clustering import Clustering
+from ..Clustering import Clustering
 import networkx as nx
 import numpy as np
 import itertools as it
+
+
+
+def LFR(n, exp=2.5, sizes_exp=4, mu=1 / 3, avg_deg=10, min_size=10,save=False,retries=10):
+    import networkit as nk
+    name = 'LFR_n{}_exp{}'.format(n, exp)
+    lfr = nk.generators.LFRGenerator(n)
+    lfr.generatePowerlawDegreeSequence(avg_deg, min(n, max(n ** (1 / (exp - 1)), 10 * avg_deg)), -exp)
+    lfr.generatePowerlawCommunitySizeSequence(min_size, n / 10, -sizes_exp)
+    lfr.setMu(mu)
+    try:
+        G = lfr.generate()
+        T = Clustering(lfr.getPartition().getVector())
+        if save:
+            nk.writeGraph(G, name + '.edges', nk.Format.EdgeListTabZero)
+            T.to_csv(name + '.csv')
+        return G,T
+    except:
+        print('fail')
+        if retries>0:
+            return LFR(n, exp, sizes_exp, mu, avg_deg, min_size, save, retries-1)
+
 
 class GraphGenerator:
     def __init__(self,display_parameters={}):
