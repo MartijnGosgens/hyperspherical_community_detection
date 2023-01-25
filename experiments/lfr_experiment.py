@@ -24,7 +24,6 @@ def load_graph(n,exp):
 def perform_experiment(load=True):
     import json
     from time import time
-    import networkit as nk
     import numpy as np
     results = {}
     if load:
@@ -59,3 +58,4 @@ def perform_experiment(load=True):
         results[name].update(results_wedges)
         with open('lfr_results.json', 'w') as fp:
             json.dump(results, fp)
+

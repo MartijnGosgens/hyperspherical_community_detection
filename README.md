@@ -1,5 +1,5 @@
 # README
-This repository contains the code to run the experiments of the paper "The Hyperspherical Geometry of Community Detection: Modularity as a Distance".
+This repository contains the code to run the experiments of the papers "*The Hyperspherical Geometry of Community Detection: Modularity as a Distance*" and "*Correcting for Granularity Bias in Modularity-Based Community Detection Methods*".
 
 To run these experiments, you will need to following python packages:
 * `numpy`
@@ -14,7 +14,19 @@ The folder `experiments` contains the implementations of the experiments. To rep
 from hyperspherical_community_detection import generate_all_figures
 generate_all_figures()
 ```
-Performing all the experiments and generating the figures may take a few hours. The implementations of these experiments and figures are found in the folder `experiments`.
+Performing all the experiments and generating the figures may take a few hours. The implementations of these experiments and figures are found in the folder `experiments`. To only generate the figures of the paper "*The Hyperspherical Geometry of Community Detection: Modularity as a Distance*", run
+
+```python
+from hyperspherical_community_detection import generate_figures_hyperspherical_geometry
+generate_figures_hyperspherical_geometry()
+```
+
+Similarly, to generate all figures and the table of "*Correcting for Granularity Bias in Modularity-Based Community Detection Methods*", run
+
+```python
+from hyperspherical_community_detection import generate_figures_granularity_bias
+generate_figures_granularity_bias()
+```
 
 ## Implementation of PairVectors and Louvain projection
 The implementation of our modification of Louvain can be found in the folder `algorithms`. The hyperspherical computations are also implemented there. The most important implementations are found in `algorithms.pair_vector`, where we implement clustering vectors and query mappings. We implement these in a way that avoids explicitly storing each entry of the pair-vector. For example, for a clustering vector, we store the partition and implement all relevant operations in ways that avoid iterating over all vertex-pairs.

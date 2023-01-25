@@ -441,6 +441,30 @@ ones = constant_vector(1)
 zeros = constant_vector(0)
 
 
+'''
+    Computes the heuristic query latitude for an input vector with correlation distance theta to the ground-truth
+    clustering and a ground-truth latitude lambdaT.
+'''
+def heuristic_latitude(lambdaT, theta):
+    return np.arccos(np.cos(lambdaT) * np.cos(theta) / (
+            1 + np.sin(lambdaT) * np.sin(theta)
+        ))
+
+
+'''
+    Applies the heuristic to the input vector x. If lambdaT and theta are set, it immediately passes them on to 
+    heuristic_latitude. Otherwise, it calculates them from bT or T.
+'''
+def do_heuristic(x,bT=None,lambdaT=None,theta=None,T=None):
+    if bT is None and T is not None:
+        bT = clustering_binary(T)
+    if bT is not None:
+        lambdaT = bT.latitude()
+        theta = x.meridian_angle(bT)
+    lat = heuristic_latitude(lambdaT,theta)
+    return x.latitude_on_meridian(lat)
+
+
 def connectivity(G):
     return PairVector(
         sparse_dict={
@@ -473,10 +497,42 @@ def wedges(G):
     )
 
 
+def jaccard(G):
+    jac_sim = lambda A,B: len(A&B)/len(A|B)
+    neighborhoods = [
+        set(G[i]) | {i}
+        for i in G.nodes
+    ]
+    # For now, this has quadratic running time, though it could easily be optimized by iterating over the wedges and
+    # edges.
+    return PairVector(vertices=G.nodes, sparse_dict={
+        (i, j): jac_sim(neighborhoods[i], neighborhoods[j])
+        for i, j in it.combinations(G.nodes, 2)
+        if len(neighborhoods[i]&neighborhoods[j]) > 0
+    })
+
+
 def query_connectivity(G,**kwargs):
     lat = np.pi/2
     eG = connectivity(G)
     return eG.latitude_on_meridian(lat)
+
+
+def noise_vector(vertices=None,n=None,sampler=np.random.normal):
+    """
+        Computes a vector where each entry is drawn from sampler. Sampler needs to be a function that takes an argument 'size'.
+    """
+    if vertices is not None:
+        n = len(list(vertices))
+    else:
+        vertices = list(range(n))
+    return PairVector(
+        vertices=vertices,
+        sparse_dict=dict(zip(
+            it.combinations(vertices,2),
+            sampler(size=int(n*(n-1)/2))
+        ))
+    )
 
 
 def query_PPM_MLE(G, mT=None, mix=None,T=None):

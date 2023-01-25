@@ -207,10 +207,11 @@ class PPM(SBM):
         ]
 
 class HeterogeneousSizedPPM(SBM):
-    def __init__(self,k=10,n=100,exp_sizes=2.5,mean_degree=10,mix=0.25,
-                directed=False,sparse=True,selfloops=False):
+    def __init__(self, k=10, n=100, exp_sizes=2.5, mean_degree=10, mix=0.25,
+                 directed=False, sparse=True, selfloops=False, sizes=None):
         from .powerlaws import powerlaw_fixed
-        sizes = powerlaw_fixed(n,k,exp_sizes)
+        if sizes is None:
+            sizes = powerlaw_fixed(n, k, exp_sizes)
         self.exp_sizes = exp_sizes
         super().__init__(
             sizes=sizes,
@@ -223,7 +224,7 @@ class HeterogeneousSizedPPM(SBM):
                 "Mean degree": mean_degree,
                 "Power-law community-size exponent": exp_sizes,
             },
-            directed=directed,sparse=sparse,selfloops=selfloops
+            directed=directed, sparse=sparse, selfloops=selfloops
         )
 
     def random_sizes(self,seed=None):
@@ -248,3 +249,201 @@ class HeterogeneousSizedPPM(SBM):
             for i in range(len(sizes))
         ])
         return SBM.make_block_matrix(m)
+
+
+def randomize_communities(self, rand=None):
+    if self.fixed_sizes:
+        return self.communities.random_same_sizes(rand=rand)
+    else:
+        from .powerlaws import powerlaw_random
+        return Clustering.FromSizes(
+            powerlaw_random(**self.community_parameters, rand=rand)
+        ).random_same_sizes(rand=rand)
+
+
+@staticmethod
+def degrees_from_sizes(communities, exp_density, exp_degrees, mean_degree, silent=True):
+    from community_detection_toolbox.random_graphs.powerlaws import powerlaw_fixed
+    node2degree = {}
+    for l, c in communities.clusters.items():
+        s = len(c)
+        # Inside each community, the degrees have a power-law distribution
+        # with exponent exp_degrees and a mean proportional to s**exp_density
+        node2degree.update(dict(zip(
+            c,
+            powerlaw_fixed(s ** (exp_density + 1), s, exp=exp_degrees, rounded=False)
+        )))
+    scaling = len(communities) * mean_degree / sum(node2degree.values())
+    degrees = [
+        scaling * node2degree[i]
+        for i in communities.keys()
+    ]
+    if not silent:
+        print("ILFR generated degrees in the range [{},{}]".format(min(degrees), max(degrees)))
+    return degrees
+
+
+def generate(self, randomize_communities=False, degrees_from_sizes=False, seed=None, silent=True):
+    rand = np.random.RandomState(seed=seed)
+    T = self.communities
+    degrees = self.degrees
+    if randomize_communities:
+        T = self.randomize_communities(rand=rand)
+    if degrees_from_sizes:
+        degrees = self.degrees_from_sizes(T, **self.degrees_parameters)
+    if degrees is None:
+        from .powerlaws import powerlaw_random
+        degrees = powerlaw_random(**self.random_degrees_parameters, rand=rand)
+    community_degree = {
+        label: sum([
+            degrees[i]
+            for i in c
+        ])
+        for label, c in T.clusters.items()
+    }
+    total_degree = sum(community_degree.values())
+    edges = []
+    excess = 0
+    for (i, t_i), (j, t_j) in it.combinations(T.items(), 2):
+        d_i, d_j = (degrees[i], degrees[j])
+        p = self.mix * d_i * d_j / total_degree
+        if t_i == t_j:
+            p += (1 - self.mix) * d_i * d_j / community_degree[t_i]
+        excess += max(0, p - 1)
+        if rand.rand() <= p:
+            edges.append((i, j))
+    if not silent:
+        print("ILFR was generated with excess expectation:", excess)
+    # Make graph
+    G = nx.Graph()
+    G.add_nodes_from(T.keys())
+    G.add_edges_from(edges)
+    return (G, T)
+
+
+class DegreeCorrectedSBM(GraphGenerator):
+    def __init__(self,degree_seq,communities,block_matrix):
+        self.default_degrees = degree_seq
+        self.communities = communities
+        n = len(degree_seq)
+        k = len(communities.sizes())
+        self.block_matrix = block_matrix
+        self.community_parameters = {
+            "total": n,
+            "k": k
+        }
+        mean_degree = sum(degree_seq)/len(degree_seq)
+        pass
+
+    def generate(self,seed=None,randomize_sizes=False):
+        pass
+
+
+class IndependentLFR(DegreeCorrectedSBM):
+    def __init__(self,degree_seq=None,communities=None,
+                n=1000,k=100,exp_degrees=2.5,exp_sizes=2.5,mean_degree=7,mix=0.25,exp_density=0.5,balanced_sizes=False):
+        if not degree_seq is None:
+            n = len(degree_seq)
+            mean_degree = sum(degree_seq)/n
+            # We don't override exp_degrees so hopefully it is correctly provided
+            self.degrees = degree_seq
+        else:
+            self.degrees = None
+        if balanced_sizes and k>0 and n>0:
+            communities = Clustering.FromSizes(Clustering.BalancedSizes(n, k))
+        self.fixed_sizes = not communities is None
+        if self.fixed_sizes:
+            n = len(communities)
+            self.communities = communities
+            k = len(communities.sizes())
+            # We don't override exp_sizes
+        else:
+            from .powerlaws import powerlaw_fixed
+            self.communities = Clustering.FromSizes(powerlaw_fixed(n,k,exp=exp_sizes))
+        self.community_parameters = {
+            "total": n,
+            "k": k,
+            "exp": exp_sizes
+        }
+        self.degrees_parameters = {
+            "mean_degree": mean_degree,
+            "exp_density": exp_density,
+            "exp_degrees": exp_degrees
+        }
+        self.random_degrees_parameters = {
+            "total": n*mean_degree,
+            "k": n,
+            "exp": exp_degrees
+        }
+        self.mix = mix
+        self.n = n
+        self.k = k
+        self.mean_degree = mean_degree
+
+    def randomize_communities(self,rand=None):
+        if self.fixed_sizes:
+            return self.communities.random_same_sizes(rand=rand)
+        else:
+            from .powerlaws import powerlaw_random
+            return Clustering.FromSizes(
+                powerlaw_random(**self.community_parameters,rand=rand)
+            ).random_same_sizes(rand=rand)
+
+    @staticmethod
+    def degrees_from_sizes(communities,exp_density,exp_degrees,mean_degree,silent=False):
+        from community_detection_toolbox.random_graphs.powerlaws import powerlaw_fixed
+        node2degree = {}
+        for l,c in communities.clusters.items():
+            s = len(c)
+            # Inside each community, the degrees have a power-law distribution
+            # with exponent exp_degrees and a mean proportional to s**exp_density
+            node2degree.update(dict(zip(
+                c,
+                powerlaw_fixed(s**(exp_density+1), s, exp=exp_degrees, rounded=False)
+            )))
+        scaling = len(communities) * mean_degree / sum(node2degree.values())
+        degrees = [
+            scaling * node2degree[i]
+            for i in communities.keys()
+        ]
+        if not silent:
+            print("ILFR generated degrees in the range [{},{}]".format(min(degrees),max(degrees)))
+        return degrees
+
+    def generate(self,randomize_communities=False,degrees_from_sizes=False,seed=None,silent=True):
+        rand = np.random.RandomState(seed=seed)
+        T = self.communities
+        degrees = self.degrees
+        if randomize_communities:
+            T = self.randomize_communities(rand=rand)
+        if degrees_from_sizes:
+            degrees= self.degrees_from_sizes(T,**self.degrees_parameters)
+        if degrees is None:
+            from .powerlaws import powerlaw_random
+            degrees = powerlaw_random(**self.random_degrees_parameters,rand=rand)
+        community_degree = {
+            label: sum([
+                degrees[i]
+                for i in c
+            ])
+            for label,c in T.clusters.items()
+        }
+        total_degree = sum(community_degree.values())
+
+        edges = []
+        excess = 0
+        for (i,t_i),(j,t_j) in it.combinations(T.items(),2):
+            d_i,d_j = (degrees[i],degrees[j])
+            p = self.mix*d_i*d_j/total_degree
+            if t_i==t_j:
+                p += (1-self.mix) * d_i*d_j / community_degree[t_i]
+            excess += max(0,p-1)
+            if rand.rand() <= p:
+                edges.append((i,j))
+        if not silent:
+            print("ILFR was generated with excess expectation:",excess)
+        # Make graph
+        G = nx.Graph()
+        G.add_nodes_from(T.keys())
+        G.add_edges_from(edges)
+        return G, T
