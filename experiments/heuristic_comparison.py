@@ -1,7 +1,7 @@
 from statistics import median
 import pandas as pd
 from ..algorithms import pair_vector as pv
-from ..random_graphs.generators import PPM, HeterogeneousSizedPPM, IndependentLFR
+from ..random_graphs.generators import PPM, HeterogeneousSizedPPM, ABCD_benchmark, IndependentLFR
 
 
 vec2mapping = {
@@ -16,9 +16,10 @@ vec2mapping = {
 
 def perform_experiment(n=400, k=20, mean_degree=8, mix=0.25, repeats=50):
     models = {
-        'DCPPM': IndependentLFR(n=n, k=k, mean_degree=mean_degree, mix=mix, balanced_sizes=True),
         'PPM': PPM(n=n, k=k, mean_degree=mean_degree, mix=mix),
         'HPPM': HeterogeneousSizedPPM(n=n, k=k, mean_degree=mean_degree, mix=mix),
+        'DCPPM': IndependentLFR(n=n, k=k, mean_degree=mean_degree, mix=mix, balanced_sizes=True),
+        'ABCD': ABCD_benchmark(n=n,min_deg=int(mean_degree/2),xi=mix,max_deg=100,max_size=300)
     }
     model2sample = {
         m_name: [model.generate(seed=seed) for seed in range(repeats)]
@@ -45,8 +46,13 @@ def perform_experiment(n=400, k=20, mean_degree=8, mix=0.25, repeats=50):
     }
 
 
-def generate_table(print_result=True, n=400, k=20, mean_degree=8, mix=0.25, repeats=50):
+def generate_table(print_result=True, n=1000, k=50, mean_degree=8, mix=0.25, repeats=50, save_json=True):
     model2vec2median = perform_experiment(n=n, k=k, mean_degree=mean_degree, mix=mix, repeats=repeats)
+    if save_json:
+        import json
+        filename = 'heuristic_comparison_n{}_k{}_deg{}_mix{:.2f}_repeats{}.json'.format(n, k, mean_degree, mix, repeats)
+        with open(filename, 'w') as fp:
+            json.dump(model2vec2median, fp)
     df = pd.DataFrame.from_dict(model2vec2median, orient='index')
     result = df.to_latex(float_format="%.4f", escape=False)
     if print_result:

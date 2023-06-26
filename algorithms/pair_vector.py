@@ -498,17 +498,23 @@ def wedges(G):
 
 
 def jaccard(G):
-    jac_sim = lambda A,B: len(A&B)/len(A|B)
-    neighborhoods = [
-        set(G[i]) | {i}
+    jac_sim = lambda A, B: len(A & B)/len(A | B)
+    neighborhoods = {
+        i: set(G[i]) | {i}
         for i in G.nodes
-    ]
-    # For now, this has quadratic running time, though it could easily be optimized by iterating over the wedges and
-    # edges.
+    }
+    pairs = {
+        (min(i, j), max(i, j))
+        for i, j in G.edges
+    }
+    for v, neighborhood in neighborhoods.items():
+        pairs |= {
+            (min(i, j), max(i, j))
+            for i, j in it.combinations(neighborhood - {v}, 2)
+        }
     return PairVector(vertices=G.nodes, sparse_dict={
         (i, j): jac_sim(neighborhoods[i], neighborhoods[j])
-        for i, j in it.combinations(G.nodes, 2)
-        if len(neighborhoods[i]&neighborhoods[j]) > 0
+        for i, j in pairs
     })
 
 
@@ -584,12 +590,15 @@ def clustering_binary(C):
     return ClusteringVector(C)
 
 
-def louvain_projection(target,lat=None,distance=euclidean_distance,silent=True):
+def louvain_projection(target,lat=None,distance=euclidean_distance,silent=True,return_vec=False,C0=None):
     if lat is not None:
         target = target.latitude_on_meridian(lat)
-    scorer=VectorScorer.FromPairVector(target,distance=distance)
+    scorer=VectorScorer.FromPairVector(target,distance=distance,C0=C0)
     if not silent:
         print('Finding projection of query vec with latitude',target.latitude())
     opt=louv.Louvain(scorer)
     opt.optimize()
-    return opt.scorer.candidate()
+    candidate = opt.scorer.candidate()
+    if return_vec:
+        return clustering_binary(candidate)
+    return candidate

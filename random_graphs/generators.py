@@ -2,7 +2,7 @@ from ..Clustering import Clustering
 import networkx as nx
 import numpy as np
 import itertools as it
-
+ABCD_PATH = 'ABCDGraphGenerator.jl/'
 
 
 def LFR(n, exp=2.5, sizes_exp=4, mu=1 / 3, avg_deg=10, min_size=10,save=False,retries=10):
@@ -39,6 +39,86 @@ class GraphGenerator:
             "{}:{}{}".format(k,(pad-len(k))*" ",v)
             for k,v in self.display_parameters.items()
         ])
+    
+
+
+class ABCD_benchmark(GraphGenerator):
+    default_params = {
+        'n': 400,
+        'xi': 0.25,
+        'exp_sizes': 1.5,
+        'min_size': 10,
+        'max_size': None,
+        'exp_deg': 2.5,
+        'min_deg': 4,
+        'max_deg': None,
+        'destination_folder': None,
+        'abcd_path': ABCD_PATH,
+    }
+
+    def __init__(self, **kwargs):
+        self.parameters = ABCD_benchmark.default_params.copy()
+        self.parameters.update(kwargs)
+        n = self.parameters['n']
+        if self.parameters['max_size'] is None:
+            self.parameters['max_size'] = int(np.round(n**(1/(max(4/3,self.parameters['exp_sizes']-1)))))
+        if self.parameters['max_deg'] is None:
+            self.parameters['max_deg'] = int(np.round(n**(1/(self.parameters['exp_deg']-1))))
+        if self.parameters['destination_folder'] is None:
+            self.parameters['destination_folder'] = f'ABCD_n{n}/'
+        super().__init__(self.parameters)
+
+
+    def generate(self, seed, load=False):
+        import os
+        # Make sure the destination folder exists
+        folder = self.parameters['destination_folder']
+        if not os.path.isdir(folder):
+            print('Creating directory',folder)
+            os.mkdir(folder)
+        if not load:
+            ABCD_benchmark.generate_with_julia(**self.parameters,seed=seed)
+        # Load the ground-truth clustering from comm[seed].dat
+        T = Clustering(dict([
+            map(int,l.strip().split('\t')) 
+            for l in open(os.path.join(folder,f'comm{seed}.dat')).readlines()
+        ]))
+        # Load the graph from net[seed].dat
+        G = nx.from_edgelist([
+            tuple(map(int,l.strip().split('\t')))
+            for l in open(os.path.join(folder,f'net{seed}.dat')).readlines()
+        ])
+        return G,T
+        
+
+    @staticmethod
+    def generate_with_julia(n, xi, exp_sizes, min_size, max_size,
+                  exp_deg, min_deg, max_deg,seed, abcd_path,destination_folder):
+        import os
+        name = str(seed)
+        # Generate degrees
+        os.system(
+            'julia '+abcd_path+'utils/deg_sampler.jl '+destination_folder+'deg{}.dat '.format(name)
+            +str(exp_deg)+' '
+            +str(min_deg)+' '
+            +str(max_deg)+' '
+            +str(n)
+            +' 1000 ' 
+            + (str(seed) if seed is not None else ''))
+        # Generate community sizes
+        os.system(
+            'julia '+abcd_path+'utils/com_sampler.jl '+destination_folder+'cs{}.dat '.format(name)
+            +str(exp_sizes)+' '
+            +str(min_size)+' '
+            +str(max_size)+' '
+            +str(n)
+            +' 1000 '
+            + (str(seed) if seed is not None else ''))
+        # Generate graph
+        os.system(
+            'julia '+abcd_path+'utils/graph_sampler.jl {1}net{0}.dat {1}comm{0}.dat {1}deg{0}.dat {1}cs{0}.dat xi '.format(name,destination_folder)
+            +str(xi)+' false false '+ (str(seed) if seed is not None else ''))
+
 
 class SBM(GraphGenerator):
     def __init__(self,sizes,block_matrix=None,

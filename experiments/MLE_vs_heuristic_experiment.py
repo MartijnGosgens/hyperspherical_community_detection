@@ -69,7 +69,7 @@ def perform_experiment(n=400, k=20, mean_degree=8, repeats=50, mixs=[0.05, 0.15,
     return lats_dict, scores_dict
 
 
-def plot_experiment(n=400, k=20, mean_degree=8, repeats=50, mixs=[0.05, 0.15, 0.25, 0.35, 0.45, 0.55, 0.65]):
+def plot_experiment(n=1000, k=50, mean_degree=8, repeats=50, mixs=[0.05, 0.15, 0.25, 0.35, 0.45, 0.55, 0.65]):
     lats_dict, scores_dict = perform_experiment(n=n, k=k, mean_degree=mean_degree, repeats=repeats, mixs=mixs)
     fig, ax = plt.subplots(figsize=(6, 3.75))
     df_lats = pd.DataFrame.from_dict(lats_dict, orient='columns')
