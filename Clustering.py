@@ -52,6 +52,9 @@ class Clustering(dict):
             for i,j in iter.combinations(c,2):
                 yield min(i, j), max(i, j)
 
+    def N(self):
+        return int(len(self)*(len(self)-1)/2)
+
     def angular_coarseness(self,return_cos=False):
         N = len(self)*(len(self)-1)/2
         mC = self.intra_pairs()
@@ -256,3 +259,19 @@ class HierarchicalClustering(Clustering):
             self.previouslevel.flatitems(self.previouslevel.clusters[i])
             for i in topitems
         ])
+
+def Pearson(A,B):
+    N = A.N()
+    mA, mB, mAB = (C.intra_pairs() for C in (A,B,A*B))
+    if mA==0 or mB==0 or mA==N or mB==N:
+        if mA==mB:
+            return 1
+        if abs(mA-mB)==N:
+            return -1
+        return 0
+    return (N*mAB-mA*mB)/(mA*(N-mA)*mB*(N-mB))**0.5
+
+def CorrelationDistance(A,B):
+    return np.arccos(Pearson(A,B))
+
+    
