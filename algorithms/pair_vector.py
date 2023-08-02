@@ -590,13 +590,13 @@ def clustering_binary(C):
     return ClusteringVector(C)
 
 
-def louvain_projection(target,lat=None,distance=euclidean_distance,silent=True,return_vec=False,C0=None):
+def louvain_projection(target,lat=None,distance=euclidean_distance,silent=True,return_vec=False,C0=None,louvain_kwargs={}):
     if lat is not None:
         target = target.latitude_on_meridian(lat)
     scorer=VectorScorer.FromPairVector(target,distance=distance,C0=C0)
     if not silent:
         print('Finding projection of query vec with latitude',target.latitude())
-    opt=louv.Louvain(scorer)
+    opt=louv.Louvain(scorer,**louvain_kwargs)
     opt.optimize()
     candidate = opt.scorer.candidate()
     if return_vec:

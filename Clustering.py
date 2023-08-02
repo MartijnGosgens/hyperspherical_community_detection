@@ -273,5 +273,3 @@ def Pearson(A,B):
 
 def CorrelationDistance(A,B):
     return np.arccos(Pearson(A,B))
-
-    
