@@ -8,6 +8,9 @@ To run these experiments, you will need to following python packages:
 * `json`
 * `pandas`
 
+For the ABCD benchmark graphs, we have saved the graphs that were used in the "*The Projection Method: a Unified Formalism for Community Detection*" in `random_graphs/ABCD_n1000`. Which are automatically loaded when using `random_graphs.generators.ABCD_benchmark.generate` with parameter `load=True`.
+To generate new graphs from the ABCD graph generator, one needs to clone [this repository](https://github.com/bkamins/ABCDGraphGenerator.jl) and change the `ABCD_PATH` variable in `random_graphs.generators` to the directory where you cloned this repository.
+
 ## Reproducing the experiments
 The folder `experiments` contains the implementations of the experiments. To reproduce all the figures, simply run the following code from a directory outside this module (but from where this module can be found).
 ```python
@@ -26,6 +29,11 @@ Similarly, to generate all figures and the table of "*Correcting for Granularity
 ```python
 from hyperspherical_community_detection import generate_figures_granularity_bias
 generate_figures_granularity_bias()
+```
+And for the figures of "*The Projection Method: a Unified Formalism for Community Detection*", run
+```python
+from hyperspherical_community_detection import generate_figures_projection_method
+generate_figures_projection_method()
 ```
 
 ## Implementation of PairVectors and Louvain projection

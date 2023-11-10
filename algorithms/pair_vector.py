@@ -475,6 +475,34 @@ def connectivity(G):
     )
 
 
+def from_sparse_matrix(M_sparse,idx2id,vertices):
+    from scipy.sparse import find
+    return PairVector(
+        vertices=vertices,
+        sparse_dict={
+            (idx2id[i],idx2id[j]): v for i,j,v in zip(*find(M_sparse))
+        }
+    )
+
+
+def discrete_markov_stability(G,timestep=1):
+    # Let P be the transition matrix and let s be the stationary distribution (i.e., s=s.dot(P), given by s_i=0.5*d_i/len(G.edges)). Markov stability is given by 
+    #    diag(s).dot(P)-s.transpose().dot(s)
+    # However, for numerical stability we multiply everything by twice the number of edges. Hence, we use the degree vector instead
+    # of the stationary distribution vector.
+    from scipy.sparse import diags
+    import networkx as nx
+    A=nx.adjacency_matrix(G)
+    n=len(G)
+    id2idx = dict(zip(G.nodes,range(n)))
+    idx2id = dict(zip(range(n),G.nodes))
+    d=A.dot(np.ones((n,)))
+    D=diags([d],[0])
+    D_inv=diags([1/d],[0])
+    P=(D_inv.dot(A))**timestep
+    return 0.5 * ones + from_sparse_matrix(D.dot(P),idx2id=idx2id,vertices=list(G.nodes)) - degree_product(G,normalized=True)
+
+
 def degree_product(G, normalized=False):
     return PairVector(
         factors=[dict(G.degree)],

@@ -30,10 +30,21 @@ def generate_figures_granularity_bias():
     for f in [hc, mvh, o1v, o1d, o2d]:
         f.generate_figures()
 
+def generate_figures_projection_method():
+    """
+        Running this function generates all figures of the paper
+        "The Projection Method: a Unified Formalism for Community Detection".
+        Each of the imported modules contains a function generate_figures() that generates the corresponding figures.
+    """
+    from .experiments import markov_stability_experiment as ms
+    from .experiments import gridsearch_experiment as gs
+    for f in [ms,gs]:
+        f.generate_figures()
 
 def generate_all_figures():
     """
-        Running this function generates all figures of both papers.
+        Running this function generates all figures of all three papers.
     """
     generate_figures_hyperspherical_geometry()
     generate_figures_granularity_bias()
+    generate_figures_projection_method()

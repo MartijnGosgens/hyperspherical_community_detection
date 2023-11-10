@@ -46,7 +46,7 @@ class ABCD_benchmark(GraphGenerator):
     default_params = {
         'n': 400,
         'xi': 0.25,
-        'exp_sizes': 1.5,
+        'exp_sizes': 2.5,
         'min_size': 10,
         'max_size': None,
         'exp_deg': 2.5,
@@ -65,7 +65,8 @@ class ABCD_benchmark(GraphGenerator):
         if self.parameters['max_deg'] is None:
             self.parameters['max_deg'] = int(np.round(n**(1/(self.parameters['exp_deg']-1))))
         if self.parameters['destination_folder'] is None:
-            self.parameters['destination_folder'] = f'ABCD_n{n}/'
+            import os
+            self.parameters['destination_folder'] = os.path.join(os.path.dirname(__file__), f'ABCD_n{n}/')
         super().__init__(self.parameters)
 
 
